@@ -1,4 +1,5 @@
 import { Readable, Transform, Writable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { once } from 'node:events';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { join } from 'node:path';
@@ -176,6 +177,20 @@ function _runTransformKeyInObject() {
     })
 }
 
+async function _runReadStreamWithAsyncIterator() {
+    await pipeline(
+        createReadStream(__filename),
+        toUpperCase,
+        process.stdout
+  );
+
+    async function* toUpperCase(source) {
+            for await (let chunk of source) {
+                yield chunk.toString().toUpperCase();
+            }
+    }
+}
+
 /**
  * Stream help us to process data in chunk without loading the whole bunch of data into memory at once
  */
@@ -183,7 +198,8 @@ function main() {
     // _runReadable();
     // _runWritable();
     // _runTransform();
-    _runTransformKeyInObject()
+    // _runTransformKeyInObject()
+    _runReadStreamWithAsyncIterator()
 }
 
 main();
