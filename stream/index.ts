@@ -1,11 +1,4 @@
-import { Readable } from 'stream';
-
-/**
- * Stream help us to process data in chunk without loading the whole bunch of data into memory at once
- */
-function main() {
-    _runReadable();
-}
+import { Readable, Writable } from 'node:stream';
 
 function _runReadable() {
     class CounterStreamReader extends Readable {
@@ -65,6 +58,30 @@ function _runReadable() {
     counterStreamReader.on('error', (err) => {
         console.error('Error stream', err);
     });
+}
+
+function _runWritable() {
+    class CounterWriteStream extends Writable {
+        _write(chunk: any, encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
+            process.stdout.write(chunk.toString() + '\n', callback);
+        }
+    }
+
+    const stream = new CounterWriteStream();
+
+    stream.write('1');
+    stream.write('2');
+    stream.write('3');
+    stream.end();
+}
+
+
+/**
+ * Stream help us to process data in chunk without loading the whole bunch of data into memory at once
+ */
+function main() {
+    // _runReadable();
+    _runWritable();
 }
 
 main();
