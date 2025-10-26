@@ -98,13 +98,23 @@ async function _runWritable() {
 function _runTransform() {
     const uppercaseTransform = new Transform({
         transform(data, encoding, cb) {
+            console.log("==========Start =====")
+            const stringData = data.toString();
+            for (let index = 0; index < stringData.length; index++) {
+                console.log(stringData.charAt(index))
+            }
+            console.log("==========End =====")
             this.push(data.toString().toUpperCase());
             cb()
         }
     })
 
-    const readStream = createReadStream(join(process.cwd(), 'stream/input.json'));
-    const writeStream = createWriteStream(join(process.cwd(), 'stream/output.json'));
+    const readStream = createReadStream(join(process.cwd(), 'stream/input.json'), {
+        highWaterMark: 5
+    });
+    const writeStream = createWriteStream(join(process.cwd(), 'stream/output.json'), {
+        highWaterMark: 5
+    });
 
     readStream
         .pipe(uppercaseTransform)
