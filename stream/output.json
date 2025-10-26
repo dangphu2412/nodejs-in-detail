@@ -1,11 +1,1 @@
-
-[
-    {
-        "ID": 1,
-        "NAME": "DANG PHU"
-    },
-    {
-        "ID": 2,
-        "NAME": "TRAM CHO DIEN"
-    }
-]
+[{"ID":1,"NAME":"Dang Phu"},{"ID":2,"NAME":"Tram cho dien"}]

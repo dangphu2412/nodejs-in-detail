@@ -2,6 +2,9 @@ import { Readable, Transform, Writable } from 'node:stream';
 import { once } from 'node:events';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { join } from 'node:path';
+import { parser } from 'stream-json';
+import { streamArray } from 'stream-json/streamers/StreamArray';
+import { chain } from 'stream-chain';
 
 function _runReadable() {
     class CounterStreamReader extends Readable {
@@ -110,15 +113,67 @@ function _runTransform() {
     })
 
     const readStream = createReadStream(join(process.cwd(), 'stream/input.json'), {
+        highWaterMark: 10
+    });
+    const writeStream = createWriteStream(join(process.cwd(), 'stream/output.json'), {
+        highWaterMark: 10
+    });
+
+    readStream
+        .pipe(uppercaseTransform)
+        .pipe(writeStream);
+}
+
+function _runTransformKeyInObject() {
+    let isFirst = true;
+
+    const readStream = createReadStream(join(process.cwd(), 'stream/input.json'), {
         highWaterMark: 5
     });
     const writeStream = createWriteStream(join(process.cwd(), 'stream/output.json'), {
         highWaterMark: 5
     });
 
-    readStream
-        .pipe(uppercaseTransform)
-        .pipe(writeStream);
+    function uppercaseKeys(obj) {
+        const newObj = {};
+
+        for (const key in obj) {
+            newObj[key.toUpperCase()] = obj[key];
+        }
+
+        return newObj;
+    }
+
+    const pipelineChain = chain([
+        readStream,
+        parser(),
+        streamArray(),
+        new Transform({
+            objectMode: true,
+            transform({ value }, encoding, cb) {
+                const transformed = uppercaseKeys(value);
+                const json = JSON.stringify(transformed);
+
+                if (isFirst) {
+                    this.push('[' + json);
+                    isFirst = false;
+                } else {
+                    this.push(',' + json);
+                }
+                cb();
+            },
+            flush(cb) {
+                // Close the JSON array
+                this.push(']');
+                cb();
+            }
+        }),
+        writeStream
+    ]);
+
+    pipelineChain.on('end', () => {
+        console.log('Ending....')
+    })
 }
 
 /**
@@ -127,7 +182,8 @@ function _runTransform() {
 function main() {
     // _runReadable();
     // _runWritable();
-    _runTransform();
+    // _runTransform();
+    _runTransformKeyInObject()
 }
 
 main();
