@@ -1,5 +1,7 @@
-import { Readable, Writable } from 'node:stream';
+import { Readable, Transform, Writable } from 'node:stream';
 import { once } from 'node:events';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { join } from 'node:path';
 
 function _runReadable() {
     class CounterStreamReader extends Readable {
@@ -93,13 +95,29 @@ async function _runWritable() {
     stream.end();
 }
 
+function _runTransform() {
+    const uppercaseTransform = new Transform({
+        transform(data, encoding, cb) {
+            this.push(data.toString().toUpperCase());
+            cb()
+        }
+    })
+
+    const readStream = createReadStream(join(process.cwd(), 'stream/input.json'));
+    const writeStream = createWriteStream(join(process.cwd(), 'stream/output.json'));
+
+    readStream
+        .pipe(uppercaseTransform)
+        .pipe(writeStream);
+}
 
 /**
  * Stream help us to process data in chunk without loading the whole bunch of data into memory at once
  */
 function main() {
     // _runReadable();
-    _runWritable();
+    // _runWritable();
+    _runTransform();
 }
 
 main();
