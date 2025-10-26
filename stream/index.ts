@@ -1,4 +1,5 @@
 import { Readable, Writable } from 'node:stream';
+import { once } from 'node:events';
 
 function _runReadable() {
     class CounterStreamReader extends Readable {
@@ -60,8 +61,16 @@ function _runReadable() {
     });
 }
 
-function _runWritable() {
+async function _runWritable() {
     class CounterWriteStream extends Writable {
+        constructor() {
+            /**
+             * If internal buffer is full, writable stream does not receive more input, wait until write to disk, ... success
+             * and the internal buffer got release, now the stream emit the event drain
+             */
+            super({ highWaterMark: 10 /* 10 bytes */ });
+        }
+
         _write(chunk: any, encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
             process.stdout.write(chunk.toString() + '\n', callback);
         }
@@ -69,9 +78,18 @@ function _runWritable() {
 
     const stream = new CounterWriteStream();
 
-    stream.write('1');
-    stream.write('2');
-    stream.write('3');
+    for (let index = 0; index < 10; index++) {
+        /**
+         * Drain means that the write is buffer into memory and reach the limit of highWaterMark
+         */
+        const isDraining = !stream.write(index.toString());
+
+        if (isDraining) {
+            console.log('Draining ...');
+            await once(stream, 'drain');
+        }
+    }
+
     stream.end();
 }
 
