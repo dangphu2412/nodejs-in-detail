@@ -1,6 +1,5 @@
 import { createReadStream, createWriteStream } from 'node:fs';
 import { join } from 'node:path';
-import { pipeline } from 'node:stream/promises';
 import { createGzip } from 'zlib';
 
 function getPath(name) {
@@ -8,13 +7,27 @@ function getPath(name) {
 }
 
 const source = createReadStream(getPath('largefile.txt'));
-const gzipStream = createGzip();
+const gzip = createGzip();
 const destination = createWriteStream(getPath('destination-good.txt.gz'));
 
-await pipeline(
-  source,
-  gzipStream,
-  destination
-);
+gzip.pipe(destination);
 
-console.log('Done good script')
+source.on('data', async (chunk) => {
+  const canWrite = gzip.write(chunk);
+
+  // 3. If gzip is full, PAUSE the source stream.
+  //    This stops it from reading any more data from the file.
+  if (!canWrite) {
+    source.pause();
+  }
+});
+
+gzip.on('drain', () => {
+  source.resume();
+});
+
+source.on('end', () => {
+  gzip.end();
+  console.log('Done good script')
+});
+
